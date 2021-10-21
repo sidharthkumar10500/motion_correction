@@ -2,8 +2,6 @@
 # real noise dataset
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
-import utils
 from tqdm import tqdm
 import os
 import h5py
@@ -31,8 +29,11 @@ nod_file   = global_dir + 'VAL_0%d/Scan_nod_%s.h5' % (
 still_file = global_dir + 'VAL_0%d/Scan_still_%s.h5' % (
     target_scan, mini_contrast)
 
-def h5_generator(file):
-    dset_nod = ismrmrd.Dataset(file, 'dataset', create_if_needed=False)
+#h5py might give error if the same .h5 file is opened and unlocked somewhere else, specifically in another ipython notebook 
+# (most of the times jupyter notebook is the culprit for this)
+def h5_generator(input_file):
+    print('input_file:-',input_file)
+    dset_nod = ismrmrd.Dataset(input_file, 'dataset', create_if_needed=False)
     header = ismrmrd.xsd.CreateFromDocument(dset_nod.read_xml_header())
     enc = header.encoding[0]
 
@@ -114,7 +115,9 @@ def h5_generator(file):
         y = acq.idx.kspace_encode_step_1
         z = acq.idx.kspace_encode_step_2
         all_data[rep, contrast, slice, :, z, y, :] = acq.data
-        return all_data
+    all_data = all_data.squeeze()
+    all_data = np.moveaxis(all_data, [1, 0], [0, 1])#swap axises to bring X and  Y in first 2 dimensions
+    return all_data
 
 
 nod_data = h5_generator(nod_file)
