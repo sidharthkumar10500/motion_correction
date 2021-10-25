@@ -18,7 +18,7 @@ parser.add_argument('-g','--global_dir', type=str, default='', metavar='', help 
 args = parser.parse_args()
 
 global_dir = '/csiNAS/brett/RealNoiseMRI/mnt/mocodata1/MoCoChallenge/MedNeurIPS/Download_Validation_Data/'
-global_dir = '/home/sidharth/Download_Validation_Data/'
+# global_dir = '/home/sidharth/Download_Validation_Data/'
 mini_contrast   = args.mini_contrast
 target_scan     =  args.target_scan # From 1 to 5
 
