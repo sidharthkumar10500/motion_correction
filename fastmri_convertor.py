@@ -112,7 +112,7 @@ if __name__ == "__main__":
         NUM_slices = kspace_data.shape[2]
         NUM_coils  = kspace_data.shape[3]
 
-        mvue_recon = np.zeros((320,320,NUM_slices),dtype=complex)
+        mvue_recon = np.zeros((400,400,NUM_slices),dtype=complex)
 
         # estimate coil sensitivites and do mvue recon
         OMP_NUM_THREADS = "20" 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
             
             xyspace = bart(1,'fft -i -u 3', kspace_data[:,:,slice_index,:])
             mvue = np.sum(xyspace* np.conj(coil_sens.squeeze()), axis = 2)
-            mvue_recon[:,:,slice_index] = bart(1,'resize -c 0 {} 1 {}'.format(320,320), mvue)
+            mvue_recon[:,:,slice_index] = bart(1,'resize -c 0 {} 1 {}'.format(400,400), mvue)
 
         kspace_single_coil = bart(1,'fft -u 3', mvue_recon)#also calculate the kspace
 
