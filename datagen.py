@@ -9,7 +9,7 @@ from scipy import ndimage
 class MotionCorrupt(Dataset):
     def __init__(self, sample_list, num_slices,
                  center_slice):
-        self.sample_list  = sample_list
+        self.sample_list  = sample_list #list of all of those pytorch files
         self.num_slices   = num_slices
         self.center_slice = center_slice
 
