@@ -17,6 +17,7 @@ from torch.optim import Adam
 from tqdm import tqdm
 from datagen import MotionCorrupt
 import argparse
+import training_funcs
 
 
 parser = argparse.ArgumentParser(description='Reading args for running the deep network training')
@@ -24,7 +25,6 @@ parser.add_argument('-e','--epochs', type=int, default=100, metavar='', help = '
 parser.add_argument('-rs','--random_seed', type=int, default=80, metavar='', help = 'Random reed for the PRNGs of the training') #optional argument
 parser.add_argument('-lr','--learn_rate', type=float, default=0.0001, metavar='', help = 'Learning rate for the network') #optional argument
 parser.add_argument('-ma','--model_arc', type=str, default='GAN', metavar='',choices=['UNET', 'GAN'], help = 'Choose the type of network to learn')
-parser.add_argument('-mm','--model_mode', type=str, default='Full_img', metavar='',choices=['Full_img', 'Patch'], help = 'Choose the mode to train the network either pass full image or patches')
 parser.add_argument('-l','--loss_type', type=str, default='Perc_L', metavar='',choices=['SSIM', 'L1', 'L2', 'Perc_L'], help = 'Choose the loss type for the main network')
 parser.add_argument('-G','--GPU_idx',  type =int, default=2, metavar='',  help='GPU to Use')
 parser.add_argument('-lb','--Lambda', type=float, default=1,metavar='', help = 'variable to weight loss fn w.r.t adverserial loss')
@@ -40,3 +40,53 @@ parser.add_argument('--scan'    , '--scan'    , type=str, default='random_cart' 
 if __name__ == '__main__':
     args = parser.parse_args()
     print(args) #print the read arguments
+
+    random_seed = args.random_seed  #changed to 80 to see the trianing behaviour on a different set
+    torch.manual_seed(random_seed)
+    np.random.seed(random_seed)
+    # Disaster: trying to make the algorithms reproducible
+    # torch.use_deterministic_algorithms(True) # if you want to set the use of determnistic algorihtms with all of pytorch, this have issues when using patch based with SSIM (that in itself is not a good idea to use anyway)
+    torch.backends.cudnn.deterministic = True # Only affects convolution operations
+    torch.backends.cudnn.benchmark     = False #if you want to replicate the results make this true
+
+    # Make pytorch see the same order of GPUs as seen by the nvidia-smi command
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    device = torch.device("cuda:{}".format(args.GPU_idx) if torch.cuda.is_available() else "cpu")
+    # Global directory
+    local_dir =  'train_results/model_%s_loss_type_%s'\
+        %(args.model_arc, args.loss_type) 
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+    args.local_dir = local_dir
+
+
+    # Creating the dataloaders
+    if args.scan_type == 'random_cart':
+        new_dir = '/home/blevac/motion_cor_training_data/random_cart/'
+        train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
+
+    elif args.scan_type == 'alt_cart':
+        new_dir = '/home/blevac/motion_cor_training_data/alternating_scan/'
+        train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
+
+    dataset = MotionCorrupt(sample_list = train_files_1, num_slices=10, center_slice = 7)
+    train_loader  = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=args.num_workers, drop_last=True)
+    print('Training data length:- ',dataset.__len__())
+    args.train_loader = train_loader
+
+    UNet1 = Unet(in_chans = args.n_channels, out_chans=args.n_channels,chans=args.filter).to(args.device)
+    UNet1.train()
+
+    # print('Number of parameters in the generator:- ', np.sum([np.prod(p.shape) for p in UNet1.parameters() if p.requires_grad]))
+
+
+    import torchvision.models as models
+    vgg16 = models.vgg16()
+    Discriminator2 = vgg16.to(device)
+
+    args.generator     = UNet1
+    args.discriminator = Discriminator2 #now using the vgg network as the discriminator
+    if (args.model_arc == 'GAN'):
+        training_funcs.GAN_training(args)
+    elif(args.model_arc == 'UNET'):
+        training_funcs.UNET_training(args)
