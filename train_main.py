@@ -76,9 +76,7 @@ if __name__ == '__main__':
 
     UNet1 = Unet(in_chans = args.n_channels, out_chans=args.n_channels,chans=args.filter).to(args.device)
     UNet1.train()
-
     # print('Number of parameters in the generator:- ', np.sum([np.prod(p.shape) for p in UNet1.parameters() if p.requires_grad]))
-
 
     import torchvision.models as models
     vgg16 = models.vgg16()

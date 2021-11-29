@@ -12,7 +12,7 @@ from typing import Sequence
 import xml.etree.ElementTree as etree
 
 parser = argparse.ArgumentParser(description='Reading args for converting the fastmri dataset')
-parser.add_argument('-g','--global_dir', type=str, default='/csiNAS2/slow/mridata/fastmri_brain/multicoil_train', metavar='', help = 'Choose the data containing directory')
+parser.add_argument('-g','--global_dir', type=str, default='/csiNAS2/slow/mridata/fastmri_brain/multicoil_test', metavar='', help = 'Choose the data containing directory')
 args = parser.parse_args()
 
 def et_query(
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     np.random.seed(22) 
     index = np.random.shuffle(np.arange(len(files)))
 
-    for file_name in tqdm(files[0:500]):#iterating over all the files in the global directory
+    for file_name in tqdm(files[0:100]):#iterating over all the files in the global directory
         #read h5 file
         a_file = h5py.File(file_name, "r")
         kspace_data = np.array(a_file.get('kspace'))
@@ -128,7 +128,9 @@ if __name__ == "__main__":
 
 
         # save the torch tensor with all the header information
-        local_dir = '/home/sidharth/sid_notebooks/motion_correction/training_data/'
+        # local_dir = '/home/sidharth/sid_notebooks/motion_correction/training_data/'
+        # choose what you want to do, different folder for creating different data for training, validation and test set
+        local_dir = '/home/sidharth/sid_notebooks/motion_correction/test_data/'
         tosave_weights = local_dir + file_name +'.pt' 
         torch.save({
             'kspace_single_coil': kspace_single_coil,
