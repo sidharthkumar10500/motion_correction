@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import torch
+import torch, torchvision
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
@@ -31,6 +31,19 @@ class PSNRLoss(nn.Module):
 
         return error_mse / self_max
 
+
+# Self implemented
+class NMSELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    def forward(self, X: torch.Tensor, Y: torch.Tensor):
+        error_norm = torch.square(torch.norm(X - Y))
+        self_norm  = torch.square(torch.norm(X))
+
+        return error_norm / self_norm
+        
 # From fMRI
 class SSIMLoss(nn.Module):
     """
