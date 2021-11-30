@@ -24,21 +24,24 @@ parser = argparse.ArgumentParser(description='Reading args for running the deep 
 parser.add_argument('-e','--epochs', type=int, default=100, metavar='', help = 'number of epochs to train the network') #positional argument
 parser.add_argument('-rs','--random_seed', type=int, default=80, metavar='', help = 'Random reed for the PRNGs of the training') #optional argument
 parser.add_argument('-lr','--learn_rate', type=float, default=0.0001, metavar='', help = 'Learning rate for the network') #optional argument
-parser.add_argument('-ma','--model_arc', type=str, default='GAN', metavar='',choices=['UNET', 'GAN'], help = 'Choose the type of network to learn')
+parser.add_argument('-ma','--model_arc', type=str, default='UNET', metavar='',choices=['UNET', 'GAN'], help = 'Choose the type of network to learn')
 parser.add_argument('-l','--loss_type', type=str, default='Perc_L', metavar='',choices=['SSIM', 'L1', 'L2', 'Perc_L'], help = 'Choose the loss type for the main network')
 parser.add_argument('-G','--GPU_idx',  type =int, default=2, metavar='',  help='GPU to Use')
 parser.add_argument('-lb','--Lambda', type=float, default=1,metavar='', help = 'variable to weight loss fn w.r.t adverserial loss')
 parser.add_argument('-df','--data_file', type=str, default='mdme_data', metavar='',choices=['mdme_data', 'available_input_data'], help = 'Data on which the model need to be trained')
 parser.add_argument('-de','--disc_epoch', type=int, default=10, metavar='', help = 'epochs for training the disc separately') 
-parser.add_argument('-ge','--gen_epoch', type=int, default=10, metavar='', help = 'epochs for training the gen separately')
-parser.add_argument('--num_work', '--num_work', type= int, default=2             , help='number of workers to use')
-parser.add_argument('--start_ep', '--start_ep', type=int, default=0             , help='start epoch for training')
-parser.add_argument('--end_ep'  , '--end_ep'  , type=int, default=200           , help='end epoch for training')
-parser.add_argument('--ch'      , '--ch'      , type=int, default=32            , help='num channels for UNet')
-parser.add_argument('--scan'    , '--scan'    , type=str, default='random_cart' , help='takes only random_cart, or alt_cart')
+parser.add_argument('-ge','--gen_epoch' , type=int, default=10, metavar='', help = 'epochs for training the gen separately')
+parser.add_argument('-nw', '--num_workers' , type=int, default=2 , metavar='', help='number of workers to use')
+parser.add_argument('-se', '--start_ep' , type=int, default=0 , metavar='', help='start epoch for training')
+parser.add_argument('-ee', '--end_ep'   , type=int, default=200, metavar='', help='end epoch for training')
+parser.add_argument('-ch', '--channels' , type=int, default=64 , metavar='', help='num channels for UNet')
+parser.add_argument('-sc', '--scan_type', type=str, default='random_cart' , help='takes only random_cart, or alt_cart')
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    args.step_size   = 10  # Number of epochs to decay with gamma
+    args.batch_size  = 1
+    args.decay_gamma = 0.5
     print(args) #print the read arguments
 
     random_seed = args.random_seed  #changed to 80 to see the trianing behaviour on a different set
@@ -52,6 +55,7 @@ if __name__ == '__main__':
     # Make pytorch see the same order of GPUs as seen by the nvidia-smi command
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     device = torch.device("cuda:{}".format(args.GPU_idx) if torch.cuda.is_available() else "cpu")
+    args.device = device
     # Global directory
     local_dir =  'train_results/model_%s_loss_type_%s'\
         %(args.model_arc, args.loss_type) 
@@ -73,8 +77,9 @@ if __name__ == '__main__':
     train_loader  = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=args.num_workers, drop_last=True)
     print('Training data length:- ',dataset.__len__())
     args.train_loader = train_loader
+    args.val_loader = train_loader #for right now using same as the training, need to replace this with the validation dataset
 
-    UNet1 = Unet(in_chans = args.n_channels, out_chans=args.n_channels,chans=args.filter).to(args.device)
+    UNet1 = Unet(in_chans = 2, out_chans= 2,chans=args.channels).to(args.device)
     UNet1.train()
     # print('Number of parameters in the generator:- ', np.sum([np.prod(p.shape) for p in UNet1.parameters() if p.requires_grad]))
 

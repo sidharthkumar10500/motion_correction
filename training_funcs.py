@@ -179,11 +179,10 @@ def GAN_training(hparams):#separate function for doing generative training
 def UNET_training(hparams):
     device       = hparams.device  
     epochs       = hparams.epochs
-    lr           = hparams.lr
+    lr           = hparams.learn_rate
     UNet1        = hparams.generator
     train_loader = hparams.train_loader 
     val_loader   = hparams.val_loader   
-    patch_size   = hparams.patch_size
     G_optimizer = optim.Adam(UNet1.parameters(), lr=lr)#right now choosing Adam, other option is SGD
     scheduler = StepLR(G_optimizer, hparams.step_size, gamma=hparams.decay_gamma)
     # initialize arrays for storing losses
@@ -202,44 +201,38 @@ def UNET_training(hparams):
     
     train_loss = np.zeros((epochs,train_data_len)) #lists to store the losses of discriminator and generator
     val_loss = np.zeros((epochs,val_data_len)) #lists to store the losses of discriminator and generator
-    if (hparams.mode=='Patch'):
-        unfold = torch.nn.Unfold(kernel_size=hparams.patch_size, stride=hparams.patch_stride) # Unfold kernel
+
     # Loop over epochs
     for epoch in tqdm(range(epochs), total=epochs, leave=True):
-        for index, (input_img, target_img, params) in enumerate(train_loader):
-            if (hparams.mode=='Patch'):
-                unfolded_in, unfolded_out = unfold(input_img[None,...]), unfold(target_img[None,...])
-                patches_in,  patches_out  = unfolded_in.reshape(1,patch_size,patch_size,-1), unfolded_out.reshape(1,patch_size,patch_size,-1)
-                patches_in,  patches_out  = patches_in.permute(3,0,1,2), patches_out.permute(3,0,1,2)
-                input_img, target_img = patches_in.to(device), patches_out.to(device) # Transfer to GPU
-            else:
-                input_img, target_img = input_img[None,...], target_img[None,...]
-            # Transfer to GPU
-            input_img, target_img = input_img.to(device), target_img.to(device)
+        for sample_idx, sample in (enumerate(train_loader)):
+            # Move to CUDA
+            for key in sample.keys():
+                try:
+                    sample[key] = sample[key].to(device)
+                except:
+                    pass
 
-            generated_image = UNet1(input_img)
+            input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+            model_out            = UNet1(input_img).permute(0,2,3,1)
+            out                  = torch.view_as_complex(model_out.contiguous())
+            generated_image      = torch.abs(out)
+            target_img           = torch.abs(sample['img_gt'])
 
             #the 1 tensor need to be changed based on the max value in the input images
             if (hparams.loss_type=='SSIM'):
-                loss_val = main_loss(generated_image, target_img, torch.tensor([1]).to(device))
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device))
             else:
-                loss_val = main_loss(generated_image, target_img)
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
 
             # compute gradients and run optimizer step
             G_optimizer.zero_grad()
             loss_val.backward()
             G_optimizer.step()
-            train_loss[epoch,index] = loss_val.cpu().detach().numpy()
+            train_loss[epoch,sample_idx] = loss_val.cpu().detach().numpy()
         # Scheduler
         scheduler.step()
         for index, (input_img, target_img, params) in enumerate(val_loader):
-            if (hparams.mode=='Patch'):
-                unfolded_in, unfolded_out = unfold(input_img[None,...]), unfold(target_img[None,...])
-                patches_in,  patches_out  = unfolded_in.reshape(1,patch_size,patch_size,-1), unfolded_out.reshape(1,patch_size,patch_size,-1)
-                patches_in,  patches_out  = patches_in.permute(3,0,1,2), patches_out.permute(3,0,1,2)
-                input_img, target_img = patches_in.to(device), patches_out.to(device) # Transfer to GPU
-            else:
-                input_img, target_img = input_img[None,...], target_img[None,...]
+            input_img, target_img = input_img[None,...], target_img[None,...]
             # Transfer to GPU
             input_img, target_img = input_img.to(device), target_img.to(device)
 
