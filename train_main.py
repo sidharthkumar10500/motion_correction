@@ -27,6 +27,7 @@ parser.add_argument('-lr','--learn_rate', type=float, default=0.0001, metavar=''
 parser.add_argument('-ma','--model_arc', type=str, default='UNET', metavar='',choices=['UNET', 'GAN'], help = 'Choose the type of network to learn')
 parser.add_argument('-l','--loss_type', type=str, default='Perc_L', metavar='',choices=['SSIM', 'L1', 'L2', 'Perc_L'], help = 'Choose the loss type for the main network')
 parser.add_argument('-G','--GPU_idx',  type =int, default=2, metavar='',  help='GPU to Use')
+parser.add_argument('-B','--batch_size',  type =int, default=10, metavar='',  help='Batch_size')
 parser.add_argument('-lb','--Lambda', type=float, default=1,metavar='', help = 'variable to weight loss fn w.r.t adverserial loss')
 parser.add_argument('-df','--data_file', type=str, default='mdme_data', metavar='',choices=['mdme_data', 'available_input_data'], help = 'Data on which the model need to be trained')
 parser.add_argument('-de','--disc_epoch', type=int, default=10, metavar='', help = 'epochs for training the disc separately') 
@@ -39,8 +40,7 @@ parser.add_argument('-sc', '--scan_type', type=str, default='random_cart' , help
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    args.step_size   = 10  # Number of epochs to decay with gamma
-    args.batch_size  = 1
+    args.step_size   = 10  # Number of epochs to decay lr with gamma in adam
     args.decay_gamma = 0.5
     print(args) #print the read arguments
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
 
     dataset = MotionCorrupt(sample_list = train_files_1, num_slices=10, center_slice = 7)
-    train_loader  = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=args.num_workers, drop_last=True)
+    train_loader  = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True)
     print('Training data length:- ',dataset.__len__())
     args.train_loader = train_loader
     args.val_loader = train_loader #for right now using same as the training, need to replace this with the validation dataset

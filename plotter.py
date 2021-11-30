@@ -70,9 +70,6 @@ def plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
 
     if hparams.mode == 'Full_img':
         img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
-    elif(hparams.mode == 'Patch'):
-        img_patch_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
-
 
 
 
@@ -99,21 +96,24 @@ def plotter_UNET(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader)
 
     if hparams.mode == 'Full_img':
         img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
-    elif(hparams.mode == 'Patch'):
-        img_patch_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
 
 
 
 # function for plotting the train and validation images
 def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
-    for index, (input_img, target_img, params) in enumerate(val_loader):
-        model_out = UNet1(input_img[None,...].to(hparams.device)) 
-        NN_output = model_out.cpu().detach().numpy().squeeze()
-        actual_out = target_img.cpu().detach().numpy().squeeze()
-        actual_in = input_img.cpu().detach().numpy().squeeze()
+    for index, sample in (enumerate(val_loader)):
+        input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+        model_out            = UNet1(input_img.to(hparams.device)).permute(0,2,3,1)
+        out                  = torch.view_as_complex(model_out.contiguous())
+        generated_image      = torch.abs(out)
+        target_img           = torch.abs(sample['img_gt'])
+
+        NN_output = generated_image[0,:,:].cpu().detach().numpy().squeeze()
+        actual_out = target_img[0,:,:].cpu().detach().numpy().squeeze()
+        actual_in = torch.abs(sample['img_motion_corrupt']).cpu().detach().numpy().squeeze()
 
         plt.figure(figsize=(16,6))
-        plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {}) {}'.format(*params[0],params[1]), fontsize=16)
+        # plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {}) {}'.format(*params[0],params[1]), fontsize=16)
         plt.subplot(1,4,1)
         plt.imshow(np.abs(actual_in),cmap='gray',vmax=0.5,vmin=0)
         plt.title('Input')
@@ -136,18 +136,22 @@ def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
         plt.colorbar()
             # Save
         plt.tight_layout()
-        plt.savefig(local_dir + '/val_image_TE = {}, TR = {}, TI = {}_{}.png'.format(*params[0],params[1]), dpi=100)
+        plt.savefig(local_dir + '/val_image_index = {}.png'.format(index), dpi=100)
         plt.close()
 
+    for index, sample in (enumerate(train_loader)):
+        input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+        model_out            = UNet1(input_img.to(hparams.device)).permute(0,2,3,1)
+        out                  = torch.view_as_complex(model_out.contiguous())
+        generated_image      = torch.abs(out)
+        target_img           = torch.abs(sample['img_gt'])
 
-    for index, (input_img, target_img, params) in enumerate(train_loader):
-        model_out = UNet1(input_img[None,...].to(hparams.device)) 
-        NN_output = model_out.cpu().detach().numpy().squeeze()
-        actual_out = target_img.cpu().detach().numpy().squeeze()
-        actual_in = input_img.cpu().detach().numpy().squeeze()
+        NN_output = generated_image[0,:,:].cpu().detach().numpy().squeeze()
+        actual_out = target_img[0,:,:].cpu().detach().numpy().squeeze()
+        actual_in = torch.abs(sample['img_motion_corrupt']).cpu().detach().numpy().squeeze()
 
         plt.figure(figsize=(16,6))
-        plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {}) {}'.format(*params[0],params[1]), fontsize=16)
+        # plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {}) {}'.format(*params[0],params[1]), fontsize=16)
         plt.subplot(1,4,1)
         plt.imshow(np.abs(actual_in),cmap='gray',vmax=0.5,vmin=0)
         plt.title('Input')
@@ -170,93 +174,5 @@ def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
         plt.colorbar()
             # Save
         plt.tight_layout()
-        plt.savefig(local_dir + '/train_image_TE = {}, TR = {}, TI = {}_{}.png'.format(*params[0],params[1]), dpi=100)
-        plt.close()
-
-
-# for plotting images when trained on the patches
-def img_patch_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
-    unfold = torch.nn.Unfold(kernel_size=hparams.patch_size,stride=hparams.patch_stride)
-    fold = torch.nn.Fold(output_size=(288, 288),kernel_size=hparams.patch_size, stride=hparams.patch_stride)
-    for index, (input_img, target_img, params) in enumerate(val_loader):
-        # Get all the patches at once
-        unfolded = unfold(input_img[None,...])
-        patches = unfolded.reshape(1,hparams.patch_size,hparams.patch_size,-1)
-        patches_in = patches.permute(3,0,1,2)
-        patches_in = patches_in.to(hparams.device)
-        model_out = UNet1(patches_in) 
-        
-        out_patches = model_out.permute(1,2,3,0)
-        out_patches = out_patches.reshape(1,hparams.patch_size*hparams.patch_size,-1)
-        folded = fold(out_patches)
-        NN_output = folded.cpu().detach().numpy().squeeze()
-        actual_out = target_img.cpu().detach().numpy().squeeze()
-        actual_in = input_img.cpu().detach().numpy().squeeze()
-
-        plt.figure(figsize=(16,6))
-        plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {})'.format(*params[0]), fontsize=16)
-        plt.subplot(1,4,1)
-        plt.imshow(np.abs(actual_in),cmap='gray',vmax=0.5,vmin=0)
-        plt.title('Input')
-        plt.colorbar()
-        plt.axis('off')
-        plt.subplot(1,4,2)
-        plt.imshow(np.abs(NN_output),cmap='gray',vmax=0.5,vmin=0)
-        plt.title('Gen Out')
-        plt.axis('off')
-        plt.colorbar()
-        plt.subplot(1,4,3)
-        plt.imshow(np.abs(actual_out),cmap='gray',vmax=0.5,vmin=0)
-        plt.title('Ground Truth')
-        plt.axis('off')
-        plt.colorbar()
-        plt.subplot(1,4,4)
-        plt.imshow(np.abs(NN_output-actual_out),cmap='gray',vmax=0.5*0.5,vmin=0)
-        plt.title('Difference 2X')
-        plt.axis('off')
-        plt.colorbar()
-            # Save
-        plt.tight_layout()
-        plt.savefig(local_dir + '/val_image_TE = {}, TR = {}, TI = {}_{}.png'.format(*params[0],params[1]), dpi=100)
-        plt.close()
-
-    for index, (input_img, target_img, params) in enumerate(train_loader):
-        # Get all the patches at once
-        unfolded = unfold(input_img[None,...])
-        patches = unfolded.reshape(1,hparams.patch_size,hparams.patch_size,-1)
-        patches_in = patches.permute(3,0,1,2)
-        patches_in = patches_in.to(hparams.device)
-        model_out = UNet1(patches_in) 
-        
-        out_patches = model_out.permute(1,2,3,0)
-        out_patches = out_patches.reshape(1,hparams.patch_size*hparams.patch_size,-1)
-        folded = fold(out_patches)
-        NN_output = folded.cpu().detach().numpy().squeeze()
-        actual_out = target_img.cpu().detach().numpy().squeeze()
-        actual_in = input_img.cpu().detach().numpy().squeeze()
-        plt.figure(figsize=(16,6))
-        plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {})'.format(*params[0]), fontsize=16)
-        plt.subplot(1,4,1)
-        plt.imshow(np.abs(actual_in),cmap='gray',vmax=0.5,vmin=0)
-        plt.title('Input')
-        plt.colorbar()
-        plt.axis('off')
-        plt.subplot(1,4,2)
-        plt.imshow(np.abs(NN_output),cmap='gray',vmax=0.5,vmin=0)
-        plt.title('Gen Out')
-        plt.axis('off')
-        plt.colorbar()
-        plt.subplot(1,4,3)
-        plt.imshow(np.abs(actual_out),cmap='gray',vmax=0.5,vmin=0)
-        plt.title('Ground Truth')
-        plt.axis('off')
-        plt.colorbar()
-        plt.subplot(1,4,4)
-        plt.imshow(np.abs(NN_output-actual_out),cmap='gray',vmax=0.5*0.5,vmin=0)
-        plt.title('Difference 2X')
-        plt.axis('off')
-        plt.colorbar()
-            # Save
-        plt.tight_layout()
-        plt.savefig(local_dir + '/train_image_TE = {}, TR = {}, TI = {}_{}.png'.format(*params[0],params[1]), dpi=100)
+        plt.savefig(local_dir + '/train_image_index = {}.png'.format(index), dpi=100)
         plt.close()

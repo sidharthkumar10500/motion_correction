@@ -231,21 +231,26 @@ def UNET_training(hparams):
             train_loss[epoch,sample_idx] = loss_val.cpu().detach().numpy()
         # Scheduler
         scheduler.step()
-        for index, (input_img, target_img, params) in enumerate(val_loader):
-            input_img, target_img = input_img[None,...], target_img[None,...]
-            # Transfer to GPU
-            input_img, target_img = input_img.to(device), target_img.to(device)
-
-            generated_image = UNet1(input_img)
-
-            #the 1 tensor need to be changed based on the max value in the input images
+        for sample_idx, sample in (enumerate(val_loader)):
+            # Move to CUDA
+            for key in sample.keys():
+                try:
+                    sample[key] = sample[key].to(device)
+                except:
+                    pass     
+            input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+            model_out            = UNet1(input_img).permute(0,2,3,1)
+            out                  = torch.view_as_complex(model_out.contiguous())
+            generated_image      = torch.abs(out)
+            target_img           = torch.abs(sample['img_gt'])
             if (hparams.loss_type=='SSIM'):
-                loss_val = main_loss(generated_image, target_img, torch.tensor([1]).to(device))
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device))
             else:
-                loss_val = main_loss(generated_image, target_img)
-            val_loss[epoch,index] = loss_val.cpu().detach().numpy()
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+
+            val_loss[epoch,sample_idx] = loss_val.cpu().detach().numpy()
     # Save models
-    local_dir = hparams.global_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.loss_type) 
+    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.loss_type) 
     if not os.path.isdir(local_dir):
         os.makedirs(local_dir)
     tosave_weights = local_dir +'/saved_weights.pt' 
