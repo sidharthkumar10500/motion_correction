@@ -25,7 +25,7 @@ parser.add_argument('-e','--epochs', type=int, default=10, metavar='', help = 'n
 parser.add_argument('-rs','--random_seed', type=int, default=80, metavar='', help = 'Random reed for the PRNGs of the training') #optional argument
 parser.add_argument('-lr','--learn_rate', type=float, default=0.0001, metavar='', help = 'Learning rate for the network') #optional argument
 parser.add_argument('-ma','--model_arc', type=str, default='GAN', metavar='',choices=['UNET', 'GAN'], help = 'Choose the type of network to learn')
-parser.add_argument('-l','--loss_type', type=str, default='Perc_L', metavar='',choices=['SSIM', 'L1', 'L2', 'Perc_L'], help = 'Choose the loss type for the main network')
+parser.add_argument('-l','--loss_type', type=str, default='L1', metavar='',choices=['SSIM', 'L1', 'L2', 'Perc_L'], help = 'Choose the loss type for the main network')
 parser.add_argument('-G','--GPU_idx',  type =int, default=2, metavar='',  help='GPU to Use')
 parser.add_argument('-B','--batch_size',  type =int, default=10, metavar='',  help='Batch_size')
 parser.add_argument('-lb','--Lambda', type=float, default=1,metavar='', help = 'variable to weight loss fn w.r.t adverserial loss')

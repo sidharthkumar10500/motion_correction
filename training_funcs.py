@@ -43,6 +43,9 @@ def GAN_training(hparams):#separate function for doing generative training
         main_loss  = nn.L1Loss()
     elif (hparams.loss_type=='L2'):
         main_loss  = nn.MSELoss() #same as L2 loss
+    elif (hparams.loss_type=='Perc_L'):#perceptual loss based on vgg
+        main_loss  = nn.L1Loss() #I will add the VGG loss later during the loss calculation time
+    VGG_loss  = VGGPerceptualLoss().to(device)
     # figuring out the issue with weak discriminator in training GAN
 
     disc_epoch = hparams.disc_epoch #discriminator will be trained 10 times as much as generator and it will be trained first
@@ -73,7 +76,7 @@ def GAN_training(hparams):#separate function for doing generative training
                 generated_image      = torch.abs(out)
                 target_img           = torch.abs(sample['img_gt'])
 
-                G = Discriminator1(generated_image)
+                G = Discriminator1(generated_image[:,None,:,:])
 
                 # ground truth labels real and fake
                 #using soft targets
@@ -81,11 +84,11 @@ def GAN_training(hparams):#separate function for doing generative training
                 fake_target = torch.zeros(list(G.size())).to(device)
 
                 disc_inp_fake = generated_image.detach()
-                D_fake = Discriminator1(disc_inp_fake)
+                D_fake = Discriminator1(disc_inp_fake[:,None,:,:])
                 D_fake_loss = discriminator_loss(D_fake, fake_target)
                 #Disc real loss
                 disc_inp_real = target_img                
-                D_real = Discriminator1(disc_inp_real)
+                D_real = Discriminator1(disc_inp_real[:,None,:,:])
                 D_real_loss = discriminator_loss(D_real,  real_target)
 
                 # average discriminator loss
@@ -105,14 +108,21 @@ def GAN_training(hparams):#separate function for doing generative training
 
 
         for gen_epoch_idx in range(gen_epoch):
-            for index, (input_img, target_img, params) in enumerate(train_loader):
-                input_img, target_img = input_img[None,...], target_img[None,...]
-                # this works for both
-                input_img, target_img = input_img.to(device), target_img.to(device) # Transfer to GPU
-                # generator forward pass
-                generated_image = UNet1(input_img)
-                G = Discriminator1(generated_image)
+            for index, sample in (enumerate(train_loader)):
+                # Move to CUDA
+                for key in sample.keys():
+                    try:
+                        sample[key] = sample[key].to(device)
+                    except:
+                        pass
 
+                input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+                model_out            = UNet1(input_img).permute(0,2,3,1)
+                out                  = torch.view_as_complex(model_out.contiguous())
+                generated_image      = torch.abs(out)
+                target_img           = torch.abs(sample['img_gt'])
+
+                G = Discriminator1(generated_image[:,None,:,:])
                 # ground truth labels real and fake
                 real_target = (torch.ones(list(G.size())).to(device))
                 fake_target = torch.zeros(list(G.size())).to(device)
@@ -120,9 +130,10 @@ def GAN_training(hparams):#separate function for doing generative training
                 gen_loss = adversarial_loss(G, real_target)
                 #the 1 tensor need to be changed based on the max value in the input images
                 if (hparams.loss_type=='SSIM'):
-                    loss_val = main_loss(generated_image, target_img, torch.tensor([1]).to(device))
+                    loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
                 else:
-                    loss_val = main_loss(generated_image, target_img)
+                    loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+
                 G_loss = gen_loss + (Lambda* loss_val)  
                 # compute gradients and run optimizer step
                 G_optimizer.zero_grad()
@@ -133,7 +144,7 @@ def GAN_training(hparams):#separate function for doing generative training
                 G_loss_l1[epoch,gen_epoch_idx,index], G_loss_adv[epoch,gen_epoch_idx,index] = loss_val.cpu().detach().numpy(), gen_loss.cpu().detach().numpy()   
                 #storing discriminator outputs 
                 D_out_fake[epoch,gen_epoch_idx,index] = np.mean(G.cpu().detach().numpy())             
-                G_real = Discriminator1(target_img)
+                G_real = Discriminator1(target_img[:,None,:,:])
                 D_out_real[epoch,gen_epoch_idx,index] = np.mean(G_real.cpu().detach().numpy())
 
             # G_loss_list[epoch,:] = G_loss_list[epoch,:]/gen_epoch 
@@ -189,7 +200,7 @@ def UNET_training(hparams):
         main_loss  = nn.MSELoss() #same as L2 loss
     elif (hparams.loss_type=='Perc_L'):#perceptual loss based on vgg
         main_loss  = VGGPerceptualLoss().to(device)
-    
+    VGG_loss  = VGGPerceptualLoss().to(device)
     train_loss = np.zeros((epochs,train_data_len)) #lists to store the losses of discriminator and generator
     val_loss = np.zeros((epochs,val_data_len)) #lists to store the losses of discriminator and generator
 
@@ -211,9 +222,9 @@ def UNET_training(hparams):
 
             #the 1 tensor need to be changed based on the max value in the input images
             if (hparams.loss_type=='SSIM'):
-                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device))
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
             else:
-                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
 
             # compute gradients and run optimizer step
             G_optimizer.zero_grad()
