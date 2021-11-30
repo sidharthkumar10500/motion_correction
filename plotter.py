@@ -72,8 +72,6 @@ def plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
         img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
 
 
-
-
 def plotter_UNET(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
     saved_results =  torch.load(tosave_weights)
     train_loss    =  saved_results['train_loss']
@@ -108,6 +106,7 @@ def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
         generated_image      = torch.abs(out)
         target_img           = torch.abs(sample['img_gt'])
 
+        #only plotting the first figure in the batch
         NN_output = generated_image[0,:,:].cpu().detach().numpy().squeeze()
         actual_out = target_img[0,:,:].cpu().detach().numpy().squeeze()
         actual_in = torch.abs(sample['img_motion_corrupt']).cpu().detach().numpy().squeeze()

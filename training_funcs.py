@@ -22,15 +22,12 @@ def GAN_training(hparams):#separate function for doing generative training
     #load the parameters of interest
     device = hparams.device  
     epochs = hparams.epochs
-    lr = hparams.lr
+    lr           = hparams.learn_rate
     Lambda = hparams.Lambda
     UNet1 = hparams.generator
     Discriminator1 = hparams.discriminator
     train_loader = hparams.train_loader 
     val_loader   = hparams.val_loader   
-    patch_size   = hparams.patch_size
-    patch_stride = hparams.patch_stride
-    Disc_train_freq = hparams.Disc_train_freq #frequency at which discriminator is trained as compared to the generator
 
     # choosing betas after talking with Ali, this are required for the case of GANs
     G_optimizer = optim.Adam(UNet1.parameters(), lr=lr, betas=(0.5, 0.999))
@@ -58,24 +55,24 @@ def GAN_training(hparams):#separate function for doing generative training
     G_loss_list, D_loss_list = np.zeros((epochs,gen_epoch,train_data_len)), np.zeros((epochs,disc_epoch,train_data_len))
     D_out_acc                = np.zeros((epochs,disc_epoch,train_data_len))
     accuracy_results         = np.zeros((epochs,disc_epoch))
-    if (hparams.mode=='Patch'):
-        unfold = torch.nn.Unfold(kernel_size=patch_size, stride=patch_stride) # Unfold kernel
     # Loop over epochs
     for epoch in tqdm(range(epochs), total=epochs, leave=True):
         # at each epoch I re-initiate the discriminator optimizer
         for disc_epoch_idx in range(disc_epoch):
-            for index, (input_img, target_img, params) in enumerate(train_loader):
-                if (hparams.mode=='Patch'):
-                    unfolded_in, unfolded_out = unfold(input_img[None,...]), unfold(target_img[None,...])
-                    patches_in,  patches_out  = unfolded_in.reshape(1,patch_size,patch_size,-1), unfolded_out.reshape(1,patch_size,patch_size,-1)
-                    patches_in,  patches_out  = patches_in.permute(3,0,1,2), patches_out.permute(3,0,1,2)
-                    input_img, target_img = patches_in.to(device), patches_out.to(device) # Transfer to GPU
-                else:
-                    input_img, target_img = input_img[None,...], target_img[None,...]
-                # this works for both
-                input_img, target_img = input_img.to(device), target_img.to(device) # Transfer to GPU
+            for index, sample in (enumerate(train_loader)):
+                # Move to CUDA
+                for key in sample.keys():
+                    try:
+                        sample[key] = sample[key].to(device)
+                    except:
+                        pass
 
-                generated_image = UNet1(input_img)
+                input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+                model_out            = UNet1(input_img).permute(0,2,3,1)
+                out                  = torch.view_as_complex(model_out.contiguous())
+                generated_image      = torch.abs(out)
+                target_img           = torch.abs(sample['img_gt'])
+
                 G = Discriminator1(generated_image)
 
                 # ground truth labels real and fake
@@ -109,13 +106,7 @@ def GAN_training(hparams):#separate function for doing generative training
 
         for gen_epoch_idx in range(gen_epoch):
             for index, (input_img, target_img, params) in enumerate(train_loader):
-                if (hparams.mode=='Patch'):
-                    unfolded_in, unfolded_out = unfold(input_img[None,...]), unfold(target_img[None,...])
-                    patches_in,  patches_out  = unfolded_in.reshape(1,patch_size,patch_size,-1), unfolded_out.reshape(1,patch_size,patch_size,-1)
-                    patches_in,  patches_out  = patches_in.permute(3,0,1,2), patches_out.permute(3,0,1,2)
-                    input_img, target_img = patches_in.to(device), patches_out.to(device) # Transfer to GPU
-                else:
-                    input_img, target_img = input_img[None,...], target_img[None,...]
+                input_img, target_img = input_img[None,...], target_img[None,...]
                 # this works for both
                 input_img, target_img = input_img.to(device), target_img.to(device) # Transfer to GPU
                 # generator forward pass
@@ -154,7 +145,7 @@ def GAN_training(hparams):#separate function for doing generative training
         # Scheduler
         G_scheduler.step()
     # Save models
-    local_dir = hparams.global_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch) 
+    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch)  
     if not os.path.isdir(local_dir):
         os.makedirs(local_dir)
     tosave_weights = local_dir +'/saved_weights.pt' 

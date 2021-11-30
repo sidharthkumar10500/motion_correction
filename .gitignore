@@ -6,6 +6,7 @@
 *.h5
 # python compiled files
 *.pyc
+*.swp
 python/.ipynb_checkpoints/
 # dont upload jupyter notebook, difficult to track them
 *.ipynb 
