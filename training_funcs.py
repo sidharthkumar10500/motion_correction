@@ -22,7 +22,7 @@ def GAN_training(hparams):#separate function for doing generative training
     #load the parameters of interest
     device = hparams.device  
     epochs = hparams.epochs
-    lr           = hparams.learn_rate
+    lr     = hparams.learn_rate
     Lambda = hparams.Lambda
     UNet1 = hparams.generator
     Discriminator1 = hparams.discriminator
@@ -38,7 +38,7 @@ def GAN_training(hparams):#separate function for doing generative training
     train_data_len = train_loader.__len__() # length of training_generator
     # Criterions or losses to choose from
     if (hparams.loss_type=='SSIM'):
-        main_loss       = SSIMLoss().to(device)
+        main_loss  = SSIMLoss().to(device)
     elif (hparams.loss_type=='L1'):
         main_loss  = nn.L1Loss()
     elif (hparams.loss_type=='L2'):
@@ -69,7 +69,6 @@ def GAN_training(hparams):#separate function for doing generative training
                         sample[key] = sample[key].to(device)
                     except:
                         pass
-
                 input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
                 model_out            = UNet1(input_img).permute(0,2,3,1)
                 out                  = torch.view_as_complex(model_out.contiguous())
@@ -79,7 +78,6 @@ def GAN_training(hparams):#separate function for doing generative training
                 G = Discriminator1(generated_image[:,None,:,:])
 
                 # ground truth labels real and fake
-                #using soft targets
                 real_target = torch.ones(list(G.size())).to(device)
                 fake_target = torch.zeros(list(G.size())).to(device)
 
@@ -102,10 +100,6 @@ def GAN_training(hparams):#separate function for doing generative training
                 D_loss_fake[epoch,disc_epoch_idx,index] =  D_fake_loss.cpu().detach().numpy()
             accuracy_results[epoch,disc_epoch_idx] = np.sum(D_out_acc[epoch,disc_epoch_idx,:])/(2*train_data_len)
             D_scheduler.step()
-        # D_loss_list[epoch,:] =  D_loss_list[epoch,:]/disc_epoch #avg loss over disc_epoch training of discriminator
-        # D_loss_real[epoch,:] =  D_loss_real[epoch,:]/disc_epoch
-        # D_loss_fake[epoch,:] =  D_loss_fake[epoch,:]/disc_epoch
-
 
         for gen_epoch_idx in range(gen_epoch):
             for index, sample in (enumerate(train_loader)):
@@ -115,7 +109,6 @@ def GAN_training(hparams):#separate function for doing generative training
                         sample[key] = sample[key].to(device)
                     except:
                         pass
-
                 input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
                 model_out            = UNet1(input_img).permute(0,2,3,1)
                 out                  = torch.view_as_complex(model_out.contiguous())
@@ -129,6 +122,7 @@ def GAN_training(hparams):#separate function for doing generative training
         
                 gen_loss = adversarial_loss(G, real_target)
                 #the 1 tensor need to be changed based on the max value in the input images
+                # all losses right now automatically have the perceptual loss included in them
                 if (hparams.loss_type=='SSIM'):
                     loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
                 else:
@@ -146,13 +140,6 @@ def GAN_training(hparams):#separate function for doing generative training
                 D_out_fake[epoch,gen_epoch_idx,index] = np.mean(G.cpu().detach().numpy())             
                 G_real = Discriminator1(target_img[:,None,:,:])
                 D_out_real[epoch,gen_epoch_idx,index] = np.mean(G_real.cpu().detach().numpy())
-
-            # G_loss_list[epoch,:] = G_loss_list[epoch,:]/gen_epoch 
-            # G_loss_l1[epoch,:], G_loss_adv[epoch,:] = G_loss_l1[epoch,:]/gen_epoch, G_loss_adv[epoch,:]/gen_epoch
-            # #storing discriminator outputs 
-            # D_out_fake[epoch,:] = D_out_fake[epoch,:]/gen_epoch          
-            # D_out_real[epoch,:] = D_out_fake[epoch,:]/gen_epoch 
-            # Generator training ends
         # Scheduler
         G_scheduler.step()
     # Save models
@@ -190,7 +177,6 @@ def UNET_training(hparams):
     # initialize arrays for storing losses
     train_data_len = train_loader.__len__() # length of training_generator
     val_data_len = val_loader.__len__()
-    # Criterions
     # Criterions or losses to choose from
     if (hparams.loss_type=='SSIM'):
         main_loss  = SSIMLoss().to(device)
@@ -213,7 +199,6 @@ def UNET_training(hparams):
                     sample[key] = sample[key].to(device)
                 except:
                     pass
-
             input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
             model_out            = UNet1(input_img).permute(0,2,3,1)
             out                  = torch.view_as_complex(model_out.contiguous())
@@ -221,11 +206,11 @@ def UNET_training(hparams):
             target_img           = torch.abs(sample['img_gt'])
 
             #the 1 tensor need to be changed based on the max value in the input images
+            # right now added VGG to all the losses, can look at other possible combinations also
             if (hparams.loss_type=='SSIM'):
                 loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
             else:
                 loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
-
             # compute gradients and run optimizer step
             G_optimizer.zero_grad()
             loss_val.backward()
@@ -249,7 +234,7 @@ def UNET_training(hparams):
                 loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device))
             else:
                 loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
-
+                
             val_loss[epoch,sample_idx] = loss_val.cpu().detach().numpy()
     # Save models
     local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.loss_type) 

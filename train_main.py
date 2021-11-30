@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-
 import h5py, os, torch, glob, scipy
 import numpy as np
 import sigpy as sp
@@ -56,13 +54,12 @@ if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     device = torch.device("cuda:{}".format(args.GPU_idx) if torch.cuda.is_available() else "cpu")
     args.device = device
-    # Global directory
+    # directory to save results
     local_dir =  'train_results/model_%s_loss_type_%s'\
         %(args.model_arc, args.loss_type) 
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
     args.local_dir = local_dir
-
 
     # Creating the dataloaders
     if args.scan_type == 'random_cart':
