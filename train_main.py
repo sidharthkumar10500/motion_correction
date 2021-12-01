@@ -40,7 +40,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.step_size   = 10  # Number of epochs to decay lr with gamma in adam
     args.decay_gamma = 0.5
-    print(args) #print the read arguments
+
 
     random_seed = args.random_seed  #changed to 80 to see the trianing behaviour on a different set
     torch.manual_seed(random_seed)
@@ -79,13 +79,14 @@ if __name__ == '__main__':
     UNet1 = Unet(in_chans = 2, out_chans= 2,chans=args.channels).to(args.device)
     UNet1.train()
     # print('Number of parameters in the generator:- ', np.sum([np.prod(p.shape) for p in UNet1.parameters() if p.requires_grad]))
-
+    print(args) #print the read arguments
     import torchvision.models as models
     resnet = models.resnet18()
     Discriminator2 = resnet.to(device)
 
     args.generator     = UNet1
     args.discriminator = Discriminator2 #now using the vgg network as the discriminator
+
     if (args.model_arc == 'GAN'):
         training_funcs.GAN_training(args)
     elif(args.model_arc == 'UNET'):

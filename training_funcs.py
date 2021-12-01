@@ -28,7 +28,9 @@ def GAN_training(hparams):#separate function for doing generative training
     Discriminator1 = hparams.discriminator
     train_loader = hparams.train_loader 
     val_loader   = hparams.val_loader   
-
+    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch)  
+    if not os.path.isdir(local_dir):
+        os.makedirs(local_dir)
     # choosing betas after talking with Ali, this are required for the case of GANs
     G_optimizer = optim.Adam(UNet1.parameters(), lr=lr, betas=(0.5, 0.999))
     G_scheduler = StepLR(G_optimizer, hparams.step_size, gamma=hparams.decay_gamma)
@@ -142,10 +144,12 @@ def GAN_training(hparams):#separate function for doing generative training
                 D_out_real[epoch,gen_epoch_idx,index] = np.mean(G_real.cpu().detach().numpy())
         # Scheduler
         G_scheduler.step()
+    torch.save({
+    'epoch': epoch,
+    'model_state_dict': UNet1.state_dict(),
+    'optimizer': G_optimizer.state_dict()}, local_dir + '/epoch'+str(epoch)+'_last_weights.pt')
     # Save models
-    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch)  
-    if not os.path.isdir(local_dir):
-        os.makedirs(local_dir)
+
     tosave_weights = local_dir +'/saved_weights.pt' 
     torch.save({
         'epoch': epoch,
@@ -172,6 +176,9 @@ def UNET_training(hparams):
     UNet1        = hparams.generator
     train_loader = hparams.train_loader 
     val_loader   = hparams.val_loader   
+    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.loss_type) 
+    if not os.path.isdir(local_dir):
+        os.makedirs(local_dir)
     G_optimizer = optim.Adam(UNet1.parameters(), lr=lr)#right now choosing Adam, other option is SGD
     scheduler = StepLR(G_optimizer, hparams.step_size, gamma=hparams.decay_gamma)
     # initialize arrays for storing losses
@@ -218,6 +225,11 @@ def UNET_training(hparams):
             train_loss[epoch,sample_idx] = loss_val.cpu().detach().numpy()
         # Scheduler
         scheduler.step()
+        torch.save({
+        'epoch': epoch,
+        'sample_idx': sample_idx,
+        'model_state_dict': UNet1.state_dict(),
+        'optimizer': G_optimizer.state_dict()}, local_dir + '/epoch'+str(epoch)+'_last_weights.pt')
         for sample_idx, sample in (enumerate(val_loader)):
             # Move to CUDA
             for key in sample.keys():
@@ -237,9 +249,6 @@ def UNET_training(hparams):
                 
             val_loss[epoch,sample_idx] = loss_val.cpu().detach().numpy()
     # Save models
-    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type'.format(hparams.lr,hparams.epochs,hparams.Lambda,hparams.loss_type) 
-    if not os.path.isdir(local_dir):
-        os.makedirs(local_dir)
     tosave_weights = local_dir +'/saved_weights.pt' 
     torch.save({
         'epoch': epoch,

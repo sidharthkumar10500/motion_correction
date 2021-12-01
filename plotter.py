@@ -68,8 +68,7 @@ def plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
     plt.savefig(local_dir + '/GAN&DISC_loss_curves.png', dpi=100)
     plt.close()
 
-    if hparams.mode == 'Full_img':
-        img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
+    img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
 
 
 def plotter_UNET(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
@@ -92,8 +91,7 @@ def plotter_UNET(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader)
     plt.savefig(local_dir + '/UNET_loss_curves.png', dpi=100)
     plt.close()
 
-    if hparams.mode == 'Full_img':
-        img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
+    img_plotter(hparams, UNet1,val_loader,train_loader,local_dir)
 
 
 
