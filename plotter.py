@@ -107,7 +107,7 @@ def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
         #only plotting the first figure in the batch
         NN_output = generated_image[0,:,:].cpu().detach().numpy().squeeze()
         actual_out = target_img[0,:,:].cpu().detach().numpy().squeeze()
-        actual_in = torch.abs(sample['img_motion_corrupt']).cpu().detach().numpy().squeeze()
+        actual_in = torch.abs(sample['img_motion_corrupt'])[0,:,:].cpu().detach().numpy().squeeze()
 
         plt.figure(figsize=(16,6))
         # plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {}) {}'.format(*params[0],params[1]), fontsize=16)
@@ -145,7 +145,7 @@ def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
 
         NN_output = generated_image[0,:,:].cpu().detach().numpy().squeeze()
         actual_out = target_img[0,:,:].cpu().detach().numpy().squeeze()
-        actual_in = torch.abs(sample['img_motion_corrupt']).cpu().detach().numpy().squeeze()
+        actual_in = torch.abs(sample['img_motion_corrupt'])[0,:,:].cpu().detach().numpy().squeeze()
 
         plt.figure(figsize=(16,6))
         # plt.suptitle('Parameters of contrast:- (TE = {}, TR = {}, TI = {}) {}'.format(*params[0],params[1]), fontsize=16)

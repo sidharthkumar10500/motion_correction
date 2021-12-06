@@ -144,10 +144,10 @@ def GAN_training(hparams):#separate function for doing generative training
                 D_out_real[epoch,gen_epoch_idx,index] = np.mean(G_real.cpu().detach().numpy())
         # Scheduler
         G_scheduler.step()
-    torch.save({
-    'epoch': epoch,
-    'model_state_dict': UNet1.state_dict(),
-    'optimizer': G_optimizer.state_dict()}, local_dir + '/epoch'+str(epoch)+'_last_weights.pt')
+        torch.save({
+        'epoch': epoch,
+        'model_state_dict': UNet1.state_dict(),
+        'optimizer': G_optimizer.state_dict()}, local_dir + '/epoch'+str(epoch)+'_last_weights.pt')
     # Save models
 
     tosave_weights = local_dir +'/saved_weights.pt' 

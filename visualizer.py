@@ -15,7 +15,7 @@ vgg16 = models.vgg16()
 
 
 # os.chdir('/home/sidharth/sid_notebooks/UNET_GAN2_training/train_results/model_GAN_input_data_mdme_data_loss_type_L1_mode_Full_img/val_split_0.2_learning_rate_0.0001_epochs_10_lambda_1_gen_epoch_10_disc_epoch_20')
-os.chdir('/home/sidharth/sid_notebooks/motion_correction/train_results/model_GAN_loss_type_L1/learning_rate_0.0001_epochs_10_lambda_1_gen_epoch_1_disc_epoch_1')
+os.chdir('/home/sidharth/sid_notebooks/motion_correction/train_results/model_GAN_loss_type_L1/learning_rate_0.0001_epochs_5_lambda_1_gen_epoch_2_disc_epoch_2')
 saved_results = torch.load('saved_weights.pt',map_location='cpu')
 hparams   =  saved_results['hparams']
 hparams.device = 'cpu' #all gpus are clogged
@@ -38,7 +38,7 @@ if not os.path.exists(local_dir):
 
 # Creating the dataloaders
 if hparams.scan_type == 'random_cart':
-    new_dir = '/home/blevac/motion_cor_training_data/random_cart/'
+    new_dir = '/home/blevac/motion_cor_val_data/random_scan/'
     train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
 
 elif hparams.scan_type == 'alt_cart':
@@ -46,7 +46,7 @@ elif hparams.scan_type == 'alt_cart':
     train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
 
 dataset = MotionCorrupt(sample_list = train_files_1, num_slices=10, center_slice = 7)
-train_loader  = DataLoader(dataset, batch_size=hparams.batch_size, shuffle=True, num_workers=hparams.num_workers, drop_last=True)
+train_loader  = DataLoader(dataset, batch_size=hparams.batch_size, shuffle=False, num_workers=hparams.num_workers, drop_last=True)
 print('Training data length:- ',dataset.__len__())
 hparams.train_loader = train_loader
 hparams.val_loader = train_loader #for right now using same as the training, need to replace this with the validation dataset
@@ -89,22 +89,22 @@ for index, sample in (enumerate(train_loader)):
     plt.figure(figsize=(16,6))
     # plt.suptitle('test_image_index = {}'.format(index), fontsize=16)
     plt.subplot(1,4,1)
-    plt.imshow(np.abs(actual_in),cmap='gray',vmax=0.5,vmin=0)
+    plt.imshow(np.abs(actual_in),cmap='gray')#,vmax=0.5,vmin=0)
     plt.title('Input, NRMSE = {:.4f}, SSIM = {:.4f}'.format(nrmse_in,SSIM_in))
     plt.colorbar()
     plt.axis('off')
     plt.subplot(1,4,2)
-    plt.imshow(np.abs(NN_output),cmap='gray',vmax=0.5,vmin=0)
+    plt.imshow(np.abs(NN_output),cmap='gray')#,vmax=0.5,vmin=0)
     plt.title('Gen Out, NRMSE = {:.4f}, SSIM = {:.4f}'.format(nrmse_gan,SSIM_gan))
     plt.axis('off')
     plt.colorbar()
     plt.subplot(1,4,3)
-    plt.imshow(np.abs(actual_out),cmap='gray',vmax=0.5,vmin=0)
+    plt.imshow(np.abs(actual_out),cmap='gray')#,vmax=0.5,vmin=0)
     plt.title('Ground Truth')
     plt.axis('off')
     plt.colorbar()
     plt.subplot(1,4,4)
-    plt.imshow(np.abs(NN_output-actual_out),cmap='gray',vmax=0.5*0.5,vmin=0)
+    plt.imshow(np.abs(NN_output-actual_out),cmap='gray')#,vmax=0.5*0.5,vmin=0)
     plt.title('Difference 2X')
     plt.axis('off')
     plt.colorbar()
