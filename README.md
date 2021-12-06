@@ -19,3 +19,7 @@ $ python motion_gen.py
 ## GAN
 
 ## Diffusion
+To run the Diffusion model at inference time use the following command:
+```
+$ python motion_inference.py --gpu 1 --anatomy brain --batch_size 1 --normalize_grad 1 --batches 0 9 --extra_accel 1 --noise_boost 1 --dc_boost 1.0 --contrast T2
+```
