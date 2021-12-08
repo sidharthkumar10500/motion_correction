@@ -24,11 +24,12 @@ def GAN_training(hparams):#separate function for doing generative training
     epochs = hparams.epochs
     lr     = hparams.learn_rate
     Lambda = hparams.Lambda
+    Lambda_b = hparams.Lambda_b
     UNet1 = hparams.generator
     Discriminator1 = hparams.discriminator
     train_loader = hparams.train_loader 
     val_loader   = hparams.val_loader   
-    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch)  
+    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}_Lambda_b_{}'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch,Lambda_b)  
     if not os.path.isdir(local_dir):
         os.makedirs(local_dir)
     # choosing betas after talking with Ali, this are required for the case of GANs
@@ -126,11 +127,11 @@ def GAN_training(hparams):#separate function for doing generative training
                 #the 1 tensor need to be changed based on the max value in the input images
                 # all losses right now automatically have the perceptual loss included in them
                 if (hparams.loss_type=='SSIM'):
-                    loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+                    loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + Lambda_b*VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
                 else:
-                    loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+                    loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + Lambda_b*VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
 
-                G_loss = gen_loss + (Lambda* loss_val)  
+                G_loss = Lambda*gen_loss + loss_val 
                 # compute gradients and run optimizer step
                 G_optimizer.zero_grad()
                 G_loss.backward()
@@ -176,7 +177,8 @@ def UNET_training(hparams):
     UNet1        = hparams.generator
     train_loader = hparams.train_loader 
     val_loader   = hparams.val_loader   
-    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.loss_type) 
+    Lambda_b = hparams.Lambda_b
+    local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_loss_type_{}_Lambda_b{}'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.loss_type,Lambda_b) 
     if not os.path.isdir(local_dir):
         os.makedirs(local_dir)
     G_optimizer = optim.Adam(UNet1.parameters(), lr=lr)#right now choosing Adam, other option is SGD
@@ -215,9 +217,9 @@ def UNET_training(hparams):
             #the 1 tensor need to be changed based on the max value in the input images
             # right now added VGG to all the losses, can look at other possible combinations also
             if (hparams.loss_type=='SSIM'):
-                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + Lambda_b*VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
             else:
-                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
+                loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:]) + Lambda_b*VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])
             # compute gradients and run optimizer step
             G_optimizer.zero_grad()
             loss_val.backward()
