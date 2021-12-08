@@ -23,7 +23,7 @@ $ python motion_gen.py
 ## GAN
 
 ## Diffusion
-Note that most of the Diffusion repo posted here was from [1]. We adapted the dataloader to correctly take our data and altered the training function to save the relevant outpututs.
+*Please note that most of the Diffusion repo posted here was from [1]. We adapted the dataloader to correctly take our data and altered the training function to save the relevant outpututs.*
 
 To run the Diffusion model at inference time use the following command:
 ```
