@@ -1,126 +1,73 @@
-import h5py
 import numpy as np
-import sigpy as sp
 import torch
-from torch.utils.data import Dataset
-import scipy
+import glob
+import matplotlib.pyplot as plt
+import sigpy as sp
 from scipy import ndimage
+from tqdm import tqdm
+import os
 
-def adjoint_op(ksp,mask,maps):
-        # Multiply input with mask and pad
-        mask_adj_ext = mask
-        ksp_padded  = ksp * mask_adj_ext
+def motion_corrupt(gt_img):
+    #input(H,W): clean Ground truth image you wish to add motion to
+    #output(H,W): motion corrupted image
 
-        # Get image representation of ksp
-        img_ksp = sp.ifft(ksp_padded,axes=(- 2, - 1))
-        # Pointwise complex multiply with complex conjugate maps
-        mult_result = img_ksp * np.conj(maps)
+    num_shots = 7 # 7 for 'random', 2 for 'alternating'
+    traj = 'cart'
+    scan_order='random'
 
-        # Sum on coil axis
-        x_adj = np.sum(mult_result, axis=0)
+    lines_per_shot         = int(np.ceil(gt_img.shape[-1]/num_shots)) #how many lines should be taken for each motion state
 
-        return x_adj
+    line_order             = np.arange(gt_img.shape[-1])
+    rp_lines               = np.random.permutation(line_order)
+    skip_lines             = [line_order[n::num_shots] for n in range(num_shots)]
+    ksp_motion_corrupt     = np.zeros(gt_img.shape).astype(np.complex64)
 
-def forward_op(img_kernel, maps, mask):
-        # Pointwise complex multiply with maps
-        mult_result = img_kernel * maps
+    for shot in range(num_shots):
+        #gnerate new motion state for each "shot"
+        start_line = shot*lines_per_shot
+        end_line   = (shot+1)*lines_per_shot
 
-        # Convert back to k-space
-        result = sp.fft(mult_result,axes=(- 2, - 1))
-        # Multiply with mask
-        result = result * mask
+        angle = np.random.uniform(low = -2.0, high = 2.0) #pick random rotation
+        delta_x = 0#int(np.ceil(np.random.uniform(low = -50.0, high = 50.0)))
+        delta_y = 0#int(np.ceil(np.random.uniform(low = -50.0, high = 50.0)))
 
-        return result
+        motion_img = ndimage.rotate(input=gt_img, angle=angle,
+                                axes=(1, 0), reshape=False, output=None, order=3,
+                                mode='constant', cval=0.0, prefilter=True) #apply rotation
 
-def translate(input, delta_x, delta_y):
-    output = np.roll(input, delta_x, axis = 1)
-    output = np.roll(output, delta_y, axis = 0)
-    return output
 
-class MotionCorrupt(Dataset):
-    def __init__(self, sample_list, maps_list, num_slices,
-                 center_slice, num_shots):
-        self.sample_list  = sample_list
-        self.num_slices   = num_slices
-        self.center_slice = center_slice
-        self.maps         = maps_list # Pre-estimated sensitivity maps
-        self.num_shots    = num_shots
+        motion_ksp = sp.fft(motion_img) #apply FFT to go from image space to k-space
 
-    def __len__(self):
-        return len(self.sample_list) * self.num_slices
-
-    def __getitem__(self, idx):
-
-        # Convert to numerical
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        # Separate slice and sample
-        sample_idx = idx // self.num_slices
-        slice_idx  = self.center_slice + \
-            np.mod(idx, self.num_slices) - self.num_slices // 2
-
-        # Load MRI image
-        with h5py.File(self.sample_list[sample_idx], 'r') as contents:
-            # Get k-space for specific slice
-            k_image = np.asarray(contents['kspace'][slice_idx])
-            ref_rss = np.asarray(contents['reconstruction_rss'][slice_idx])
-
-        # If desired, load external sensitivity maps
-        if not self.maps is None:
-            with h5py.File(self.maps[sample_idx], 'r') as contents:
-                # Get sensitivity maps for specific slice
-                s_maps      = np.asarray(contents['s_maps'][slice_idx])#was map_idx
+        #select non-overlapping regions of k-space from each shot to save in one universal k-space
+        if scan_order == 'random':
+            ksp_motion_corrupt[:,rp_lines[start_line:end_line]] = motion_ksp[:,rp_lines[start_line:end_line]]
+        elif scan_order == 'linear':
+            ksp_motion_corrupt[:,line_order[start_line:end_line]] = motion_ksp[:,line_order[start_line:end_line]]
+        elif scan_order == 'skip':
+            ksp_motion_corrupt[:,skip_lines[shot]] = motion_ksp[:,skip_lines[shot]]
+    #take IFFT of corrupt k-space to obtain corrupt image
+    img_motion_corrupt = sp.ifft(ksp_motion_corrupt)
+    return img_motion_corrupt
 
 
 
-        gt_img = adjoint_op(k_image, np.ones(1), s_maps)
+clean_data_folder = '/home/sidharth/sid_notebooks/motion_correction/val_data'
+all_files = sorted(glob.glob(clean_data_folder + '/*.pt'))
+new_dir = '/home/blevac/Junk/'
 
-        lines_per_shot = int(np.ceil(k_image.shape[-1]/self.num_shots)) #how many lines should be taken for each motion state
+for file in tqdm(all_files):
 
-        #generate motion corrupted image
-        for shot in range(self.num_shots):
-            angle = np.random.uniform(low = -15.0, high = 15.0)
-            delta_x = int(np.ceil(np.random.uniform(low = -50.0, high = 50.0)))
-            delta_y = int(np.ceil(np.random.uniform(low = -50.0, high = 50.0)))
-            motion_img = ndimage.rotate(input=gt_img, angle=angle,
-                                        axes=(1, 0), reshape=False, output=None, order=3,
-                                        mode='constant', cval=0.0, prefilter=True) #apply rotation
+    scan = torch.load(file)
+    file_name = os.path.basename(file)
+    gt_imgs = scan['mvue_recon'] #retrieve clean samples from each patient scan
+    mo_co_full = np.zeros(gt_imgs.shape).astype(complex)
 
-            motion_img = translate(input = motion_img, delta_x = delta_x, delta_y = delta_y)
+    for slice in range(gt_imgs.shape[-1]):
+        #generate motion for all slices in each patient file
+        mo_co_single = motion_corrupt(gt_img = gt_imgs[...,slice])
+        mo_co_full[...,slice] = mo_co_single
 
-            motion_ksp = sp.fft(motion_img,axes=(- 2, - 1), norm = 'ortho')
-
-            start_line = shot*lines_per_shot
-            end_line   = (shot+1)*lines_per_shot
-
-            if shot == 0:
-                lines = motion_ksp[:,start_line:end_line]
-                ksp_motion_corrupt = lines
-            if shot > 0:
-                if shot<(self.num_shots-1):
-                    lines = motion_ksp[:,start_line:end_line]
-                else:
-                    lines = motion_ksp[:,start_line:]
-
-                ksp_motion_corrupt = np.append(ksp_motion_corrupt, lines,axis=1)
-
-
-        img_motion_corrupt = sp.ifft(ksp_motion_corrupt,axes=(- 2, - 1))
-        scale_gt = np.max(abs(gt_img))
-        scale_motion = np.max(abs(img_motion_corrupt))
-
-        img_motion_corrupt = img_motion_corrupt/scale_motion
-        gt_img = gt_img/scale_gt
-        data_range = np.max(abs(gt_img))
-        sample = {'idx': idx,
-                  'ksp_motion_corrupt': ksp_motion_corrupt.astype(np.complex64),
-                  'img_motion_corrupt': img_motion_corrupt.astype(np.complex64),
-                  'ksp_gt': k_image.astype(np.complex64),
-                  'img_gt': gt_img.astype(np.complex64),
-                  'data_range': data_range
-#                   'acs_image': acs_image.astype(np.float32),
-#                   'norm_const': norm_const.astype(np.float32)
-                 }
-
-        return sample
+    #save all motion corrupt images with ground truth images
+    torch.save({
+            'gt_imgs': gt_imgs,
+            'moco_imgs': mo_co_full}, new_dir + file_name)
