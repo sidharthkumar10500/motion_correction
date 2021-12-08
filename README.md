@@ -25,7 +25,7 @@ $ python motion_gen.py
 ## Diffusion
 *Please note that most of the Diffusion repo posted here was from [1]. We adapted the dataloader to correctly take our data and altered the training function to save the relevant outpututs.*
 
-To run the Diffusion model at inference time please alter the validation data file path in *aux_motion_data.py* for your specific machine. Then use the following command:
+To run the Diffusion model at inference time please alter the validation data file path in *aux_motion_data.py* for your specific machine. If you have generated your own motion corrupt data using *motion_gen.py* then the file path should be the same that you used to generate the images. Then use the following command:
 ```
 $ python motion_inference.py --gpu 2 --anatomy brain --batch_size 1 --normalize_grad 1 --batches 0 9 --extra_accel 1 --noise_boost 1 --dc_boost 0.1 --contrast NA --val_num 0
 ```
