@@ -86,7 +86,7 @@ if __name__ == '__main__':
     Discriminator2 = resnet.to(device)
 
     args.generator     = UNet1
-    args.discriminator = Discriminator2 #now using the vgg network as the discriminator
+    args.discriminator = Discriminator2 
 
     if (args.model_arc == 'GAN'):
         training_funcs.GAN_training(args)
