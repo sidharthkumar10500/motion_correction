@@ -1,0 +1,12 @@
+numpy
+scikit-image
+scikit-learn
+scipy
+tqdm
+torch==1.8.0
+sigpy
+h5py
+matplotlib
+dotmap
+glob
+argparse
