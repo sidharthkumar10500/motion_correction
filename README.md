@@ -25,7 +25,7 @@ $ python motion_gen.py
 ## GAN
 
 ## Diffusion
-*Please note that most of the Diffusion repo posted here was from [1]. We adapted the dataloader to correctly take our data and altered the training function to save the relevant outpututs.*
+*Please note that most of the Diffusion repo posted here was from [1]. We adapted the dataloader to correctly take our data and altered the training function to save the relevant outputs.*
 
 First you must download the saved diffusion model from our google drive (https://drive.google.com/drive/folders/16PskzHb4IJYeXGBnryjGSESgDx9dGfkE?usp=sharing). Place the folder *ncsv2-mri-mvue* inside the *Diffusion_Model* folder to maintain the assumed file structure.
 
