@@ -10,5 +10,5 @@
 python/.ipynb_checkpoints/
 # dont upload jupyter notebook, difficult to track them
 *.ipynb 
-jupyter_notebooks/
+old_jupyter_notebooks/
 __pycache__/
