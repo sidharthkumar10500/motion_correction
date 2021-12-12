@@ -12,7 +12,7 @@ This file is for implementing motion correction deep learning project for the co
 ```
 $ pip install -r requirements.txt 
 ```
-
+before running each method at inference download a subset of the validation dataset at: https://drive.google.com/drive/folders/16PskzHb4IJYeXGBnryjGSESgDx9dGfkE?usp=sharing. Make sure that you change the file paths in all the relevent locations in the code to ensure you get the data from the correct location on your machine.
 ## Simulating_Motion
 run the following script with the correct input and output file paths on your PC to generate motion:
 
