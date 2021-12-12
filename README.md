@@ -33,4 +33,4 @@ To run the Diffusion model at inference time please alter the validation data fi
 ```
 $ python motion_inference.py --gpu 2 --anatomy brain --batch_size 1 --normalize_grad 1 --batches 0 9 --extra_accel 1 --noise_boost 1 --dc_boost 0.1 --contrast NA --val_num 0
 ```
-[1] Ajil   Jalal,   Marius   Arvinte,   Giannis   Daras,   Eric   Price,Alexandros G Dimakis, and Jonathan I Tamir.  Robust com-pressed sensing mri with deep generative priors. Advances in Neural Information Processing Systems, 2021
+[1] Ajil   Jalal,   Marius   Arvinte,   Giannis   Daras,   Eric   Price,Alexandros G Dimakis, and Jonathan I Tamir.  Robust compressed sensing mri with deep generative priors. Advances in Neural Information Processing Systems, 2021
