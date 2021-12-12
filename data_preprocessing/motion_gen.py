@@ -7,9 +7,14 @@ from scipy import ndimage
 from tqdm import tqdm
 import os
 
+
+"""
+The aim of this notebook is to generate motion corrupt images from the single coil ground truth data created by the fastmri_convertor.py
+"""
+
 def motion_corrupt(gt_img):
-    #input(H,W): clean Ground truth image you wish to add motion to
-    #output(H,W): motion corrupted image
+    # input(H,W) : clean Ground truth image you wish to add motion to
+    # output(H,W): motion corrupted image
 
     num_shots = 7 # 7 for 'random', 2 for 'alternating'
     traj = 'cart'
@@ -50,8 +55,7 @@ def motion_corrupt(gt_img):
     return img_motion_corrupt
 
 
-
-clean_data_folder = '/home/sidharth/sid_notebooks/motion_correction/val_data'
+clean_data_folder = '/home/sidharth/sid_notebooks/motion_correction/val_data'#data processed from the fastmri dataset
 all_files = sorted(glob.glob(clean_data_folder + '/*.pt'))
 new_dir = '/home/blevac/Junk/'
 
