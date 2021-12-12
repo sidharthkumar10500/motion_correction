@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(description='Reading args for converting the fa
 parser.add_argument('-g','--global_dir', type=str, default='/csiNAS2/slow/mridata/fastmri_brain/multicoil_test', metavar='', help = 'Choose the data containing directory')
 args = parser.parse_args()
 
+# this function reads the ismrm format data and converts the useful header information
 def et_query(
     root: etree.Element,
     qlist: Sequence[str],
