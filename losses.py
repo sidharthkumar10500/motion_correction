@@ -100,13 +100,9 @@ def lambda_step(drop_epochs, drop_factor):
 
     return core_function
 
-
-
-
 # following from this link https://learnopencv.com/paired-image-to-image-translation-pix2pix/
 adversarial_loss = nn.BCEWithLogitsLoss() #nn.BCELoss() #wgan loss is also a good option
 l1_loss = nn.L1Loss()
-
 
 def generator_loss(generated_image, target_img, G, real_target, Lambda = 100):
     # G: Output predictions from the discriminator, when fed with generator-produced images.
@@ -139,9 +135,8 @@ class NRMSELoss(nn.Module):
         return torch.sqrt(error_norm / self_norm)
 
 
-
 ''' Using VGGperceptualloss as used from https://gist.github.com/alper111/8233cdb0414b4cb5853f2f730ab95a49
-    Might need to update this so as to make sure that it works with the current setup and with absolute value images
+    Updated this so as to make sure that it works with the current setup and with absolute value images
 '''
 class VGGPerceptualLoss(torch.nn.Module):
     def __init__(self, resize=True):

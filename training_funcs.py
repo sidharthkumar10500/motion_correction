@@ -32,7 +32,7 @@ def GAN_training(hparams):#separate function for doing generative training
     local_dir = hparams.local_dir + '/learning_rate_{:.4f}_epochs_{}_lambda_{}_gen_epoch_{}_disc_epoch_{}_Lambda_b_{}'.format(hparams.learn_rate,hparams.epochs,hparams.Lambda,hparams.gen_epoch,hparams.disc_epoch,Lambda_b)  
     if not os.path.isdir(local_dir):
         os.makedirs(local_dir)
-    # choosing betas after talking with Ali, this are required for the case of GANs
+    # choosing betas as per GAN requirements
     G_optimizer = optim.Adam(UNet1.parameters(), lr=lr, betas=(0.5, 0.999))
     G_scheduler = StepLR(G_optimizer, hparams.step_size, gamma=hparams.decay_gamma)
     D_optimizer = optim.Adam(Discriminator1.parameters(), lr=0.00001, betas=(0.5, 0.999))
@@ -51,7 +51,7 @@ def GAN_training(hparams):#separate function for doing generative training
     VGG_loss  = VGGPerceptualLoss().to(device)
     # figuring out the issue with weak discriminator in training GAN
 
-    disc_epoch = hparams.disc_epoch #discriminator will be trained 10 times as much as generator and it will be trained first
+    disc_epoch = hparams.disc_epoch #discriminator will be trained ""x"" times as much as generator and it will be trained first
     gen_epoch  = hparams.gen_epoch #generator will be trained for these many iterations 
 
     #lists to store the losses of discriminator and generator
@@ -124,7 +124,7 @@ def GAN_training(hparams):#separate function for doing generative training
                 fake_target = torch.zeros(list(G.size())).to(device)
         
                 gen_loss = adversarial_loss(G, real_target)
-                #the 1 tensor need to be changed based on the max value in the input images
+                # the 1 tensor need to be changed based on the max value in the input images
                 # all losses right now automatically have the perceptual loss included in them
                 if (hparams.loss_type=='SSIM'):
                     loss_val = main_loss(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device)) + Lambda_b*VGG_loss(generated_image[:,None,:,:], target_img[:,None,:,:])

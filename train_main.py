@@ -17,7 +17,7 @@ from datagen import MotionCorrupt
 import argparse
 import training_funcs
 
-
+# argument parser, change defaults using terminal inputs
 parser = argparse.ArgumentParser(description='Reading args for running the deep network training')
 parser.add_argument('-e','--epochs', type=int, default=2, metavar='', help = 'number of epochs to train the network') #positional argument
 parser.add_argument('-rs','--random_seed', type=int, default=80, metavar='', help = 'Random reed for the PRNGs of the training') #optional argument
@@ -42,11 +42,11 @@ if __name__ == '__main__':
     args.step_size   = 10  # Number of epochs to decay lr with gamma in adam
     args.decay_gamma = 0.5
 
-    random_seed = args.random_seed  #changed to 80 to see the trianing behaviour on a different set
+    random_seed = args.random_seed  #set random seeds
     torch.manual_seed(random_seed)
     np.random.seed(random_seed)
-    # Disaster: trying to make the algorithms reproducible
-    # torch.use_deterministic_algorithms(True) # if you want to set the use of determnistic algorihtms with all of pytorch, this have issues when using patch based with SSIM (that in itself is not a good idea to use anyway)
+
+    # torch.use_deterministic_algorithms(True) # if you want to set the use of determnistic algorihtms with all of pytorch
     torch.backends.cudnn.deterministic = True # Only affects convolution operations
     torch.backends.cudnn.benchmark     = False #if you want to replicate the results make this true
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
         os.makedirs(local_dir)
     args.local_dir = local_dir
 
-    # Creating the dataloaders
+    # Creating the dataloaders, change this directory if you have saved the updated fastmri converted data to some other folder
     if args.scan_type == 'random_cart':
         new_dir = '/home/blevac/motion_cor_training_data/random_scan/'
         # new_dir = '/home/sidharth/sid_notebooks/motion_correction/temp_train_data/' #to check if the everything is running smoothly

@@ -4,6 +4,10 @@ import torch
 plt.rcParams.update({'font.size': 18})
 plt.ioff(); plt.close('all')
 
+"""
+The objective of this script is to occasionally plot some of the training and val set images so that the user can see
+if they are converging or not. 
+"""
 def plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
     saved_results = torch.load(tosave_weights)
     G_loss_l1   =  saved_results['G_loss_l1']
