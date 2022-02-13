@@ -5,15 +5,10 @@ import os, sys
 # sys.path.append("/home/blevac/misc/HW/bart-0.6.00/python")        ## change to YOUR path
 from bart import bart#required for importing bart
 from tqdm.auto import tqdm
-
 import os, torch, argparse, h5py, glob
-
-
-os.chdir('/home/sidharth/sid_notebooks/MDME_DL_datacreation')#change current working directory
-import functions_def as function_defs
 from scipy import ndimage
 import sigpy as sp
-os.chdir('/home/sidharth/sid_notebooks/')#change current working directory
+
 
 # argument parser, change defaults using terminal inputs
 parser = argparse.ArgumentParser(description='Reading args for running the deep network training')
@@ -92,6 +87,7 @@ def motion_corrupt_ksp(image,ordering_type):
 
 if __name__ == '__main__':
     # loading the files from a particular folder
+    os.chdir('/home/sidharth/sid_notebooks/')#change current working directory
     files = glob.glob("MDME_DL_datacreation/mdme_estimated_parameter_maps/*.pt")
     args = parser.parse_args()
     ETL = args.etl
