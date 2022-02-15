@@ -4,6 +4,7 @@
 *.pt
 *.png
 *.h5
+*.txt
 # python compiled files
 *.pyc
 *.swp
