@@ -1,6 +1,6 @@
 #!/bin/bash
 # bash script to recon multiple subject data in a single go
-export ETL=18
+export ETL=9
 export TE_effective=110
 export TE_bw_echoes=10
 for subject in {12..27}
