@@ -13,7 +13,7 @@ from Unet import Unet
 from losses import SSIMLoss, MCLoss, NMSELoss, NRMSELoss
 from torch.optim import Adam
 from tqdm import tqdm
-from datagen import MotionCorrupt
+from datagen import *
 import argparse
 import training_funcs
 
@@ -24,7 +24,7 @@ parser.add_argument('-rs','--random_seed', type=int, default=80, metavar='', hel
 parser.add_argument('-lr','--learn_rate', type=float, default=0.0001, metavar='', help = 'Learning rate for the network') #optional argument
 parser.add_argument('-ma','--model_arc', type=str, default='GAN', metavar='',choices=['UNET', 'GAN'], help = 'Choose the type of network to learn')
 parser.add_argument('-l','--loss_type', type=str, default='L1', metavar='',choices=['SSIM', 'L1', 'L2', 'Perc_L'], help = 'Choose the loss type for the main network')
-parser.add_argument('-G','--GPU_idx',  type =int, default=4, metavar='',  help='GPU to Use')
+parser.add_argument('-G','--GPU_idx',  type =int, default=1, metavar='',  help='GPU to Use')
 parser.add_argument('-B','--batch_size',  type =int, default=5, metavar='',  help='Batch_size')
 parser.add_argument('-lb','--Lambda', type=float, default=1,metavar='', help = 'variable to weight loss fn w.r.t adverserial loss')
 parser.add_argument('-lb_b','--Lambda_b', type=float, default=1,metavar='', help = 'variable to weight loss fn w.r.t perceptual loss')
@@ -35,7 +35,7 @@ parser.add_argument('-nw', '--num_workers' , type=int, default=2 , metavar='', h
 parser.add_argument('-se', '--start_ep' , type=int, default=0 , metavar='', help='start epoch for training')
 parser.add_argument('-ee', '--end_ep'   , type=int, default=200, metavar='', help='end epoch for training')
 parser.add_argument('-ch', '--channels' , type=int, default=64 , metavar='', help='num channels for UNet')
-parser.add_argument('-sc', '--scan_type', type=str, default='random_cart' , help='takes only random_cart, or alt_cart')
+parser.add_argument('-sc', '--scan_type', type=str, default='FSE' , help='takes only SE, or FSE, to distinuguish bw correct and incorrect simulation method')
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -55,24 +55,24 @@ if __name__ == '__main__':
     device = torch.device("cuda:{}".format(args.GPU_idx) if torch.cuda.is_available() else "cpu")
     args.device = device
     # directory to save results
-    local_dir =  'train_results/model_%s_loss_type_%s'\
-        %(args.model_arc, args.loss_type) 
+    local_dir =  'train_results/model_%s_loss_type_%s_scan_type_%s'\
+        %(args.model_arc, args.loss_type, args.scan_type) 
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
     args.local_dir = local_dir
 
     # Creating the dataloaders, change this directory if you have saved the updated fastmri converted data to some other folder
-    if args.scan_type == 'random_cart':
-        new_dir = '/home/blevac/motion_cor_training_data/random_scan/'
-        # new_dir = '/home/sidharth/sid_notebooks/motion_correction/temp_train_data/' #to check if the everything is running smoothly
-        train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
+    if args.scan_type == 'SE':
+        train_data_dir = '/home/sidharth/sid_notebooks/motion_correction/repo_text_files' + '/training_samples.txt'
+        dataset = MotionCorrupt_SE(train_data_dir)
+        train_loader  = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True)
+        
+    elif args.scan_type == 'FSE':
+        train_data_dir = '/home/sidharth/sid_notebooks/motion_correction/repo_text_files' + '/training_samples.txt'
+        dataset = MotionCorrupt_FSE(train_data_dir)
+        train_loader  = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True)
 
-    elif args.scan_type == 'alt_cart':
-        new_dir = '/home/blevac/motion_cor_training_data/alternating_scan/'
-        train_files_1 = sorted(glob.glob(new_dir + '/*.pt'))
-
-    dataset = MotionCorrupt(sample_list = train_files_1, num_slices=10, center_slice = 7)
-    train_loader  = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True)
+    
     print('Training data length:- ',dataset.__len__())
     args.train_loader = train_loader
     args.val_loader = train_loader #for right now using same as the training, need to replace this with the validation dataset
