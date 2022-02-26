@@ -169,6 +169,14 @@ def GAN_training(hparams):#separate function for doing generative training
         'D_out_fake':D_out_fake,
         'D_out_acc':D_out_acc,
         'hparams': hparams}, tosave_weights)
+
+    sourceFile = open(local_dir +'/params_used.txt', 'w')
+    for arg in vars(hparams):
+        print(arg, '=', getattr(hparams, arg), file = sourceFile)
+        if(arg=='val_loader'):
+            break
+    # print(hparams, file = sourceFile)
+    sourceFile.close()
     plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader)
 
 
@@ -261,4 +269,12 @@ def UNET_training(hparams):
         'train_loss': train_loss,
         'val_loss': val_loss,
         'hparams': hparams}, tosave_weights)
+
+    sourceFile = open(local_dir +'/params_used.txt', 'w')
+    for arg in vars(hparams):
+        print(arg, '=', getattr(hparams, arg), file = sourceFile)
+        if(arg=='val_loader'):
+            break
+    # print(hparams, file = sourceFile)
+    sourceFile.close()
     plotter_UNET(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader)
