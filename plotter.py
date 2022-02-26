@@ -18,8 +18,10 @@ def plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
     D_loss      = saved_results['D_loss_list']
     D_out_fake  = saved_results['D_out_fake']
     D_out_real  = saved_results['D_out_real']
+    val_nrmse_loss = saved_results['val_nrmse_loss']
+    val_ssim_loss  = saved_results['val_ssim_loss']
     Lambda      = hparams.Lambda
-    fig, ax1 = plt.subplots(figsize=(8,20), nrows=4, ncols=1)
+    fig, ax1 = plt.subplots(figsize=(8,20), nrows=5, ncols=1)
     ax2 = ax1[0].twinx()
     ax1[0].plot(np.mean(G_loss_l1,axis=(1,2)), 'g-')
     ax2.plot(np.mean(G_loss_adv,axis=(1,2)), 'b-')
@@ -63,6 +65,19 @@ def plotter_GAN(hparams,tosave_weights,local_dir,UNet1,train_loader,val_loader):
     ax2.set_ylabel('Disc out fake', color='b')
     ax2.tick_params(axis='y', colors='b')
     plt.title('Disc out, $\lambda$ = {}'.format(Lambda))
+
+    ax2 = ax1[4].twinx()
+    ax1[4].plot(np.mean(val_nrmse_loss,axis=1), 'g-')
+    ax2.plot(np.mean(val_ssim_loss,axis=1), 'b-')
+
+    ax1[4].set_xlabel('Epoch index')
+    ax1[4].set_ylabel('NRMSE', color='g')
+    ax1[4].tick_params(axis='y', colors='g')
+    ax2.set_ylabel('SSIM', color='b')
+    ax2.tick_params(axis='y', colors='b')
+    plt.title('Avg. NRMSE and SSIM (Val), $\lambda$ = {}'.format(Lambda))
+
+
 
     # Save
     plt.tight_layout()
@@ -225,5 +240,5 @@ def img_plotter(hparams, UNet1,val_loader,train_loader,local_dir):
         plt.colorbar()
             # Save
         plt.tight_layout()
-        plt.savefig(local_dir + '/test_images'+ '/val_image_index = {}.png'.format(index), dpi=100)
+        plt.savefig(local_dir + '/test_images'+ '/test_image_index = {}.png'.format(index), dpi=100)
         plt.close()

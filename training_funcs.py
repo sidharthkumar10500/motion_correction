@@ -39,6 +39,7 @@ def GAN_training(hparams):#separate function for doing generative training
     D_scheduler = StepLR(D_optimizer, 5, 0.5)
     # initialize arrays for storing losses
     train_data_len = train_loader.__len__() # length of training_generator
+    val_data_len   = val_loader.__len__()   # length of val_generator 
     # Criterions or losses to choose from
     if (hparams.loss_type=='SSIM'):
         main_loss  = SSIMLoss().to(device)
@@ -61,6 +62,10 @@ def GAN_training(hparams):#separate function for doing generative training
     G_loss_list, D_loss_list = np.zeros((epochs,gen_epoch,train_data_len)), np.zeros((epochs,disc_epoch,train_data_len))
     D_out_acc                = np.zeros((epochs,disc_epoch,train_data_len))
     accuracy_results         = np.zeros((epochs,disc_epoch))
+    val_nrmse_loss = np.zeros((epochs,val_data_len))
+    val_ssim_loss  = np.zeros((epochs,val_data_len))
+    SSIM       = SSIMLoss().to(device)
+    NRMSE      = NRMSELoss()
     # Loop over epochs
     for epoch in tqdm(range(epochs), total=epochs, leave=True):
         # at each epoch I re-initiate the discriminator optimizer
@@ -147,6 +152,22 @@ def GAN_training(hparams):#separate function for doing generative training
                 D_out_real[epoch,gen_epoch_idx,index] = np.mean(G_real.cpu().detach().numpy())
         # Scheduler
         G_scheduler.step()
+        # saving the validation set results, now 
+        for index, sample in (enumerate(val_loader)):
+            # Move to CUDA
+            for key in sample.keys():
+                try:
+                    sample[key] = sample[key].to(device)
+                except:
+                    pass
+            input_img            = torch.view_as_real(sample['img_motion_corrupt']).permute(0,3,1,2)
+            model_out            = UNet1(input_img).permute(0,2,3,1)
+            out                  = torch.view_as_complex(model_out.contiguous())
+            generated_image      = torch.abs(out)
+            target_img           = torch.abs(sample['img_gt'])
+            # SSIM def is defined in a way so that the network tries to minimize it
+            val_ssim_loss[epoch,index] = 1 - SSIM(generated_image[:,None,:,:], target_img[:,None,:,:], torch.tensor([1]).to(device))
+            val_nrmse_loss[epoch,index] = NRMSE(generated_image, target_img)
         torch.save({
         'epoch': epoch,
         'model_state_dict': UNet1.state_dict(),
@@ -168,6 +189,8 @@ def GAN_training(hparams):#separate function for doing generative training
         'D_out_real':D_out_real,
         'D_out_fake':D_out_fake,
         'D_out_acc':D_out_acc,
+        'val_nrmse_loss':val_nrmse_loss,
+        'val_ssim_loss':val_ssim_loss,
         'hparams': hparams}, tosave_weights)
 
     sourceFile = open(local_dir +'/params_used.txt', 'w')
