@@ -9,5 +9,5 @@
 # done
 # echo "All done"
 
-# python train_main.py -e 20 -ma GAN -G 1 -de 10 -ge 5 -B 5 -lb 0.1 -lb_b 1 -sc FSE
-python train_main.py -e 20 -ma GAN -G 2 -de 10 -ge 5 -B 5 -lb 0.1 -lb_b 1 -sc SE
+# python train_main.py -e 10 -ma GAN -G 1 -de 20 -ge 10 -B 20 -lb 0.1 -lb_b 1 -sc FSE
+python train_main.py -e 10 -ma GAN -G 1 -de 20 -ge 10 -B 20 -lb 0.1 -lb_b 1 -sc SE

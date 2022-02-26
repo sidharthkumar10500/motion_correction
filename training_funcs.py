@@ -97,6 +97,8 @@ def GAN_training(hparams):#separate function for doing generative training
                 # compute gradients and run optimizer step
                 D_total_loss.backward()
                 D_optimizer.step()
+                for p in Discriminator1.parameters():#clipping the critic's weights
+                    p.data.clamp_(-0.01, 0.01)
                 D_out_acc[epoch,disc_epoch_idx,index] = (binary_acc(D_real.cpu(), True) + binary_acc(D_fake.cpu(), False))
                 D_loss_list[epoch,disc_epoch_idx,index] =  D_total_loss.cpu().detach().numpy()
                 D_loss_real[epoch,disc_epoch_idx,index] =  D_real_loss.cpu().detach().numpy()
